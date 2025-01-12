@@ -54,13 +54,13 @@ jobs:
           args: >
             ecs register-task-definition
             --family test-node-server
-            --container-definitions '[{
-              "name": "TestNodeServer",
-              "image": "${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}",
-              "essential": true,
-              "memory": 512,
-              "cpu": 256
-            }]'
+            --container-definitions "[{
+              \"name\": \"TestNodeServer\",
+              \"image\": \"${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}\",
+              \"essential\": true,
+              \"memory\": 512,
+              \"cpu\": 256
+            }]"
 
       # Deploy to ECS - Force new deployment based on the updated image (no need to register new task definition)
       - name: Deploy to ECS
