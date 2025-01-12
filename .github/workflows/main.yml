@@ -44,29 +44,23 @@ jobs:
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
-      # TODO: Create a new task definition and use the latest task definition to update the service instead of directly using the image
       # Register new task definition
       - name: Register new task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-register-task-definition@v1
+        uses: imehedi/actions-awscli-v2@latest
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
         with:
-          family: test-node-server
-          container-definitions: |
-            [
-              {
-                "name": "TestNodeServer",
-                "image": "${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}",
-                "essential": true,
-                "memory": 512,
-                "cpu": 256
-              }
-            ]
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          args: >
+            ecs register-task-definition
+            --family test-node-server
+            --container-definitions '[{
+              "name": "TestNodeServer",
+              "image": "${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}",
+              "essential": true,
+              "memory": 512,
+              "cpu": 256
+            }]'
 
       # Deploy to ECS - Force new deployment based on the updated image (no need to register new task definition)
       - name: Deploy to ECS
