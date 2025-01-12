@@ -11,6 +11,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Express server!' });
 });
 
+// healthcheck endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ message: 'Latest - Server is healthy' });
+});
+
 // Start server
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${port}`);
