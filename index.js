@@ -8,12 +8,12 @@ app.use(express.json());
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the Express server!' });
+  res.json({ message: 'Abracadabra - Server is healthy' });
 });
 
 // healthcheck endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ message: 'Latest - Server is healthy' });
+  res.status(200).json({ message: 'Abracadabra - Server is healthy' });
 });
 
 // Start server
