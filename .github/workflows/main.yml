@@ -39,7 +39,8 @@ jobs:
       - name: Build, tag, and push image to ECR
         env:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URI }}
-          IMAGE_TAG: ${{ github.sha }}
+          # IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
@@ -54,6 +55,7 @@ jobs:
         with:
           args: ecs update-service --cluster TestEcsCluster --service cfn-service-github-aws-infra --force-new-deployment
 
+      # TODO: Create a new task definition and use the latest task definition to update the service instead of directly using the image
       # # Register new task definition
       # - name: Register new task definition
       #   id: task-def
