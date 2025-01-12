@@ -16,9 +16,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Log in to Amazon ECR
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
@@ -26,6 +35,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # Build, tag, and push image to ECR
       - name: Build, tag, and push image to ECR
         env:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URI }}
@@ -34,32 +44,44 @@ jobs:
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Register new task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-register-task-definition@v1
-        with:
-          family: test-node-server
-          container-definitions: |
-            [
-              {
-                "name": "TestNodeServer",
-                "image": "${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}",
-                "essential": true,
-                "memory": 512,
-                "cpu": 256
-              }
-            ]
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
+      # Deploy to ECS - Force new deployment based on the updated image (no need to register new task definition)
       - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-service@v1
+        uses: imehedi/actions-awscli-v2@latest
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         with:
-          cluster: TestEcsCluster
-          service: cfn-service-github-aws-infra
-          task-definition: ${{ steps.task-def.outputs.task-definition-arn }}
-          wait-for-service-stability: true
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          args: ecs update-service --cluster TestEcsCluster --service cfn-service-github-aws-infra --force-new-deployment
+
+      # # Register new task definition
+      # - name: Register new task definition
+      #   id: task-def
+      #   uses: aws-actions/amazon-ecs-register-task-definition@v1
+      #   with:
+      #     family: test-node-server
+      #     container-definitions: |
+      #       [
+      #         {
+      #           "name": "TestNodeServer",
+      #           "image": "${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}",
+      #           "essential": true,
+      #           "memory": 512,
+      #           "cpu": 256
+      #         }
+      #       ]
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+
+      # - name: Deploy to ECS
+      #   uses: aws-actions/amazon-ecs-deploy-service@v1
+
+      #   with:
+      #     cluster: TestEcsCluster
+      #     service: cfn-service-github-aws-infra
+      #     task-definition: ${{ steps.task-def.outputs.task-definition-arn }}
+      #     wait-for-service-stability: true
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
