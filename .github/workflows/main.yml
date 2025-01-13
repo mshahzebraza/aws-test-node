@@ -6,11 +6,14 @@ on:
       - main
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
   TASK_DEFINITION_FAMILY_NAME: ${{ vars.TASK_DEFINITION_FAMILY_NAME }}
+  SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
 
 jobs:
   build-and-deploy:
@@ -24,17 +27,17 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       # Log in to Amazon ECR
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       # TODO: Uncomment if task-definition is required to be downloaded before updating the image
       # # Download the existing task definition (by default it grabs the latest revision)
@@ -48,7 +51,7 @@ jobs:
       # Build, tag, and push image to ECR
       - name: Build, tag, and push image to ECR
         env:
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URI }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
@@ -59,9 +62,7 @@ jobs:
         id: render-web-container
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         env:
-          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
-          CONTAINER_NAME: TestNodeServer
         with:
           # task-definition: last-task-definition.json # in case of saved/downloaded task definition
           task-definition-family: ${{ env.TASK_DEFINITION_FAMILY_NAME }}
@@ -71,9 +72,6 @@ jobs:
       # Deploy to Amazon ECS service using the rendered (updated) task definition
       - name: Deploy to Amazon ECS service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        env:
-          CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
-          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
         with:
           task-definition: ${{ steps.render-web-container.outputs.task-definition }} # this will point to the latest task definition
           service: ${{ env.SERVICE_NAME }}
