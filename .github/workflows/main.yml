@@ -10,6 +10,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+  TASK_DEFINITION_FAMILY_NAME: ${{ vars.TASK_DEFINITION_FAMILY_NAME }}
 
 jobs:
   build-and-deploy:
@@ -35,6 +36,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # TODO: Uncomment if task-definition is required to be downloaded before updating the image
+      # # Download the existing task definition (by default it grabs the latest revision)
+      # - name: Download the existing task definition
+      #   run: |
+      #     aws ecs describe-task-definition \
+      #       --task-definition ${{ env.TASK_DEFINITION_FAMILY_NAME }} \
+      #       --region ${{ env.AWS_REGION }} \
+      #       > last-task-definition.json
+
       # Build, tag, and push image to ECR
       - name: Build, tag, and push image to ECR
         env:
@@ -44,35 +54,65 @@ jobs:
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
-      # Register new task definition
-      - name: Register new task definition
-        uses: imehedi/actions-awscli-v2@latest
+      # Render the task definition (replace the image uri property with the new image uri created in the previous step)
+      - name: Render Amazon ECS task definition
+        id: render-web-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
+          CONTAINER_NAME: TestNodeServer
         with:
-          args: >
-            ecs register-task-definition
-            --family test-node-server
-            --container-definitions "[{
-              \"name\": \"TestNodeServer\",
-              \"image\": \"${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}\",
-              \"essential\": true,
-              \"memory\": 512,
-              \"cpu\": 256
-            }]"
+          # task-definition: last-task-definition.json # in case of saved/downloaded task definition
+          task-definition-family: ${{ env.TASK_DEFINITION_FAMILY_NAME }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}
 
-      # Deploy to ECS - Force new deployment based on the updated image (no need to register new task definition)
-      - name: Deploy to ECS
-        uses: imehedi/actions-awscli-v2@latest
+      # Deploy to Amazon ECS service using the rendered (updated) task definition
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-          CLUSTER_NAME: TestEcsCluster
-          SERVICE_NAME: cfn-service-github-aws-infra
+          CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
         with:
-          args: ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.SERVICE_NAME }} --force-new-deployment
+          task-definition: ${{ steps.render-web-container.outputs.task-definition }} # this will point to the latest task definition
+          service: ${{ env.SERVICE_NAME }}
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
+
+      # # Register new task definition
+      # - name: Register new task definition
+      #   uses: imehedi/actions-awscli-v2@latest
+      #   env:
+      #     ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+      #     IMAGE_TAG: ${{ github.sha }}
+      #   with:
+      #     args: >
+      #       ecs register-task-definition
+      #       --family test-node-server
+      #       --container-definitions "[{
+      #         \"name\": \"TestNodeServer\",
+      #         \"image\": \"${{ env.ECR_REPOSITORY_URI }}:${{ env.IMAGE_TAG }}\",
+      #         \"essential\": true,
+      #         \"memory\": 512,
+      #         \"cpu\": 256
+      #       }]"
+
+      # # Deploy to ECS - Force new deployment based on the latest task definition
+      # - name: Deploy to ECS
+      #   uses: imehedi/actions-awscli-v2@latest
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      #     CLUSTER_NAME: TestEcsCluster
+      #     SERVICE_NAME: cfn-service-github-aws-infra
+      #   with:
+      #     args: >
+      #       ecs update-service
+      #       --cluster ${{ env.CLUSTER_NAME }}
+      #       --service ${{ env.SERVICE_NAME }}
+      #       --force-new-deployment
 
       # - name: Deploy to ECS
       #   uses: aws-actions/amazon-ecs-deploy-service@v1
