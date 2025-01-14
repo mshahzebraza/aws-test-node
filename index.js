@@ -8,12 +8,12 @@ app.use(express.json());
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Github-Aws Linkage Confirmation Test - Server is healthy' });
+  res.json({ message: 'Stack-With-ECR - Server is healthy' });
 });
 
 // healthcheck endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ message: 'Github-Aws Linkage Confirmation Test - Server is healthy' });
+  res.status(200).json({ message: 'Stack-With-ECR - Server is healthy' });
 });
 
 // Start server
