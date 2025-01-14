@@ -8,12 +8,12 @@ app.use(express.json());
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Stack-With-ECR - Server is healthy' });
+  res.json({ message: 'Stack-With-ECR-2 - Server is healthy' });
 });
 
 // healthcheck endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ message: 'Stack-With-ECR - Server is healthy' });
+  res.status(200).json({ message: 'Stack-With-ECR-2 - Server is healthy' });
 });
 
 // Start server
