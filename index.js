@@ -10,11 +10,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Connect to MongoDB Atlas
-mongoose.connect(process.env.MONGODB_URI)/* .then(() => {
+mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log('Connected to MongoDB Atlas');
 }).catch((error) => {
   console.error('Error connecting to MongoDB Atlas:', error);
-}); */
+});
 
 // Define a schema and model
 const testSchema = new mongoose.Schema({
@@ -25,7 +25,7 @@ const Test = mongoose.model('Test', testSchema);
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Stack-With-ECR-112 - Hello World' });
+  res.json({ message: 'Stack-With-ECR-Env Added - Hello World' });
 });
 
 // healthcheck endpoint
