@@ -95,7 +95,8 @@ jobs:
           task-definition: ${{ steps.render-web-container.outputs.task-definition }} # this will point to the latest task definition
           service: ${{ env.SERVICE_NAME }}
           cluster: ${{ env.CLUSTER_NAME }}
-          wait-for-service-stability: true
+          wait-for-service-stability: false # TODO: DISABLED to speed up deployment
+
 
       # # Register new task definition
       # - name: Register new task definition

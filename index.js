@@ -10,10 +10,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Connect to MongoDB Atlas
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(process.env.MONGODB_URI)/* .then(() => {
+  console.log('Connected to MongoDB Atlas');
+}).catch((error) => {
+  console.error('Error connecting to MongoDB Atlas:', error);
+}); */
 
 // Define a schema and model
 const testSchema = new mongoose.Schema({
