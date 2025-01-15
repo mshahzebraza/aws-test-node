@@ -25,7 +25,7 @@ const Test = mongoose.model('Test', testSchema);
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Stack-With-ECR-Env Added - Hello World' });
+  res.json({ message: 'Stack-With-ECR-Testing-Auto-Deploy - Hello World' });
 });
 
 // healthcheck endpoint
